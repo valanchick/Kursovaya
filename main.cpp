@@ -375,10 +375,6 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "The Game of Life");
     GameOfLife game(rows, cols);
 
-    sf::Text generationText("", font, 20);
-    generationText.setFillColor(sf::Color(71, 74, 81));
-    generationText.setPosition(20, 115);
-
     sf::Text startText("Start", font, 20);
     startText.setFillColor(sf::Color(71, 74, 81));
     startText.setPosition(20, 25);
@@ -388,14 +384,54 @@ int main() {
     startButton.setFillColor(sf::Color(165, 165, 165));
 
     sf::RectangleShape generationButton(sf::Vector2f(200, 60));
-    generationButton.setPosition(10, 100);
+    generationButton.setPosition(10, 500);
     generationButton.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text generationText("", font, 20);
+    generationText.setFillColor(sf::Color(71, 74, 81));
+    generationText.setPosition(generationButton.getPosition().x + 50, generationButton.getPosition().y + 20);
+
+    sf::RectangleShape setPattern(sf::Vector2f(200, 60));
+    setPattern.setPosition(10, 80);
+    setPattern.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text patternsText("Patterns", font, 20);
+    patternsText.setFillColor(sf::Color(71, 74, 81));
+    patternsText.setPosition(setPattern.getPosition().x + 50, setPattern.getPosition().y + 20);
+
+    sf::RectangleShape patternBlock(sf::Vector2f(200, 60));
+    patternBlock.setPosition(10, 150);
+    patternBlock.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text blockText("Block", font, 20);
+    blockText.setFillColor(sf::Color(71, 74, 81));
+    blockText.setPosition(70, 165);
+
+    sf::RectangleShape patternGlider(sf::Vector2f(200, 60));
+    patternGlider.setPosition(10, 220);
+    patternGlider.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text gliderText("Glider", font, 20);
+    gliderText.setFillColor(sf::Color(71, 74, 81));
+    gliderText.setPosition(70, 235);
+
+    sf::RectangleShape patternEight(sf::Vector2f(200, 60));
+    patternEight.setPosition(10, 290);
+    patternEight.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text eightText("Eight", font, 20);
+    eightText.setFillColor(sf::Color(71, 74, 81));
+    eightText.setPosition(70, 305);
 
     sf::RectangleShape endScreen(sf::Vector2f(400, 200));
     endScreen.setFillColor(sf::Color(165, 165, 165));
     endScreen.setOutlineThickness(5);
     endScreen.setOutlineColor(sf::Color(71, 74, 81));
     endScreen.setPosition((screenWidth - 400) / 2, (screenHeight - 200) / 2);
+
+    sf::Text Error("The field is too small for this pattern", font, 20);
+    Error.setPosition(screenWidth/2, 100);
+    Error.setFillColor(sf::Color(128, 24, 24));
 
     sf::Text endText("Simulation is ended", font, 40);
     endText.setFillColor(sf::Color(71, 74, 81));
@@ -405,6 +441,8 @@ int main() {
     );
 
     bool simulationEnded = false;
+    bool showPatternMenu = false;
+    bool showError = false;
 
     sf::Clock clock;
     bool isMousePressed = false;
@@ -416,27 +454,75 @@ int main() {
                 window.close();
             }
 
+
             if (!simulationEnded && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
 
                 int offsetX = (window.getSize().x - cols * CELL_SIZE) / 2;
                 int offsetY = (window.getSize().y - rows * CELL_SIZE) / 2;
 
+                if (setPattern.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                    showPatternMenu = !showPatternMenu;
+                }
+
                 if (mousePos.y >= offsetY) {
+                    showError = false;
                     int x = (mousePos.x - offsetX) / CELL_SIZE;
                     int y = (mousePos.y - offsetY) / CELL_SIZE;
                     if (x >= 0 && x < cols && y >= 0 && y < rows) {
                         game.toggleCell(x, y);
                     }
                 }
-                else {
-                    if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                        game.toggleSimulation();
-                        if (game.isRunning()) {
-                            startText.setString("Stop");
+                else if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                    showError = false;
+                    game.toggleSimulation();
+                    if (game.isRunning()) {
+                        startText.setString("Stop");
+                    }
+                    else {
+                        startText.setString("Start");
+                    }
+                }
+                else if (showPatternMenu) {
+                    if (patternBlock.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        if (rows >= 2 && cols >= 2) {
+                            showError = false;
+                            game.toggleCell(cols / 2, rows / 2);
+                            game.toggleCell(cols / 2, rows / 2 - 1);
+                            game.toggleCell(cols / 2 - 1, rows / 2);
+                            game.toggleCell(cols / 2 - 1, rows / 2 - 1);
+                            showPatternMenu = false;
                         }
                         else {
-                            startText.setString("Start");
+                            showError = true;
+                        }
+                    }
+                    else if (patternGlider.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        if (rows >= 3 && cols >= 3) {
+                            showError = false;
+                            game.toggleCell(1, 0);
+                            game.toggleCell(2, 1);
+                            game.toggleCell(0, 2);
+                            game.toggleCell(1, 2);
+                            game.toggleCell(2, 2);
+                        }
+                        else {
+                            showError = true;
+                        }
+                    }
+                    else if (patternEight.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        if (rows >= 8 && cols >= 8) {
+                            int numEight = 2;
+                            showError = false;
+                            for (int i = 0; i <= numEight; i++) {
+                                for (int j = 0; j <= numEight; j++) {
+                                    game.toggleCell(cols / 2 - i - 1, rows / 2 - j - 1);
+                                    game.toggleCell(cols / 2 + i, rows / 2 + j);
+                                }
+                            }
+                        }
+                        else {
+                            showError = true;
                         }
                     }
                 }
@@ -463,6 +549,21 @@ int main() {
         window.draw(generationButton);
         window.draw(generationText);
         window.draw(startText);
+        window.draw(setPattern); 
+        window.draw(patternsText);
+
+        if (showPatternMenu) {
+            window.draw(patternBlock);
+            window.draw(patternGlider);
+            window.draw(blockText);
+            window.draw(gliderText);
+            window.draw(patternEight);
+            window.draw(eightText);
+        }
+
+        if (showError) {
+            window.draw(Error);
+        }
 
         if (simulationEnded) {
             window.draw(endScreen);
