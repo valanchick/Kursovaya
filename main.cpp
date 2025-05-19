@@ -3,10 +3,74 @@
 #include <iostream>
 #include <sstream>
 #include <limits>
+#include <map>
+#include <numeric>
+#include <tuple>
 
 const int CELL_SIZE = 30;
 const float UPDATE_TIME = 1.0f;
 const int PADDING = 50;
+
+enum SimulationType { CLASSIC, COLORED };
+
+SimulationType chooseSimulationType(sf::RenderWindow& window) {
+    sf::Font font;
+    if (!font.loadFromFile("calibri.ttf")) {
+        std::cerr << "Failed to load font!" << std::endl;
+        return CLASSIC;
+    }
+
+    sf::Text title("Choose Simulation Type", font, 40);
+    title.setFillColor(sf::Color(71, 74, 81));
+    title.setPosition(window.getSize().x / 2 - title.getLocalBounds().width / 2, 100);
+
+    sf::RectangleShape classicButton(sf::Vector2f(300, 80));
+    classicButton.setPosition(window.getSize().x / 2 - 150, 200);
+    classicButton.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text classicText("Classic Game of Life", font, 30);
+    classicText.setFillColor(sf::Color(71, 74, 81));
+    classicText.setPosition(classicButton.getPosition().x + 30, classicButton.getPosition().y + 20);
+
+    sf::RectangleShape coloredButton(sf::Vector2f(300, 80));
+    coloredButton.setPosition(window.getSize().x / 2 - 150, 320);
+    coloredButton.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text coloredText("Colored Game of Life", font, 30);
+    coloredText.setFillColor(sf::Color(71, 74, 81));
+    coloredText.setPosition(coloredButton.getPosition().x + 30, coloredButton.getPosition().y + 20);
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+                return CLASSIC;
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+
+                if (classicButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                    return CLASSIC;
+                }
+                else if (coloredButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                    return COLORED;
+                }
+            }
+        }
+
+        window.clear(sf::Color(220, 220, 220));
+        window.draw(title);
+        window.draw(classicButton);
+        window.draw(classicText);
+        window.draw(coloredButton);
+        window.draw(coloredText);
+        window.display();
+    }
+
+    return CLASSIC;
+}
 
 void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int screenHeight, unsigned int size[]) {
     sf::Font font;
@@ -237,6 +301,195 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
     }
 }
 
+class ColorGameOfLife {
+private:
+    int rows, cols;
+    std::vector<std::vector<sf::Color>> grid;
+    bool running = false;
+    int generation = 0;
+    int changes = 0;
+    sf::Color currentColor = sf::Color::Black;
+
+    std::vector<sf::Color> getNeighbors(int x, int y) const {
+        std::vector<sf::Color> neighbors;
+
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (dx == 0 && dy == 0) continue;
+
+                int nx = (x + dx + cols) % cols;
+                int ny = (y + dy + rows) % rows;
+
+                neighbors.push_back(grid[ny][nx]);
+            }
+        }
+        return neighbors;
+    }
+
+    sf::Color averageColor(const std::vector<sf::Color>& colors) const {
+        if (colors.empty()) return sf::Color::Transparent;
+
+        int r = 0, g = 0, b = 0;
+        int count = 0;
+
+        for (const auto& color : colors) {
+            if (color != sf::Color::Transparent) {
+                r += color.r;
+                g += color.g;
+                b += color.b;
+                count++;
+            }
+        }
+
+        if (count == 0) return sf::Color::Transparent;
+
+        return sf::Color(
+            static_cast<sf::Uint8>(r / count),
+            static_cast<sf::Uint8>(g / count),
+            static_cast<sf::Uint8>(b / count)
+        );
+    }
+
+public:
+    ColorGameOfLife(int rows, int cols) : rows(rows), cols(cols) {
+        grid.resize(rows, std::vector<sf::Color>(cols, sf::Color::Transparent));
+    }
+
+    void setCurrentColor(int r, int g, int b) {
+        r = std::min(255, std::max(0, r));
+        g = std::min(255, std::max(0, g));
+        b = std::min(255, std::max(0, b));
+        currentColor = sf::Color(r, g, b);
+    }
+
+    void toggleCell(int x, int y) {
+        if (grid[y][x] == sf::Color::Transparent) {
+            grid[y][x] = currentColor;
+        }
+        else {
+            grid[y][x] = sf::Color::Transparent;
+        }
+    }
+
+    int countLiveCells() const {
+        int count = 0;
+        for (const auto& row : grid) {
+            for (const auto& cell : row) {
+                if (cell != sf::Color::Transparent) count++;
+            }
+        }
+        return count;
+    }
+
+    void clear() {
+        for (auto& row : grid) {
+            for (auto& cell : row) {
+                if (cell != sf::Color::Transparent) {
+                    cell = sf::Color::Transparent;
+                }
+            }
+        }
+        generation = 0;
+    }
+
+    void change() {
+        if (!running) return;
+
+        std::vector<std::vector<sf::Color>> newGrid = grid;
+        changes = 0;
+
+        for (int y = 0; y < rows; ++y) {
+            for (int x = 0; x < cols; ++x) {
+                auto neighbors = getNeighbors(x, y);
+                int liveNeighbors = std::count_if(neighbors.begin(), neighbors.end(),
+                    [](const sf::Color& c) { return c != sf::Color::Transparent; });
+
+                sf::Color current = grid[y][x];
+                sf::Color newColor = current;
+
+                if (current != sf::Color::Transparent) {
+                    if (liveNeighbors != 2 && liveNeighbors != 3) {
+                        newColor = sf::Color::Transparent;
+                    }
+                }
+                else {
+                    if (liveNeighbors == 3) {
+                        std::vector<sf::Color> liveColors;
+                        for (const auto& color : neighbors) {
+                            if (color != sf::Color::Transparent) {
+                                liveColors.push_back(color);
+                            }
+                        }
+
+                        if (liveColors.size() == 3) {
+                            newColor = averageColor(liveColors);
+                        }
+                    }
+                }
+
+                if (newColor != current) {
+                    changes++;
+                    newGrid[y][x] = newColor;
+                }
+            }
+        }
+
+        grid = newGrid;
+        generation++;
+    }
+
+    void draw(sf::RenderWindow& window) {
+        sf::RectangleShape cell(sf::Vector2f(CELL_SIZE, CELL_SIZE));
+
+        int offsetX = (window.getSize().x - cols * CELL_SIZE) / 2;
+        int offsetY = (window.getSize().y - rows * CELL_SIZE) / 2;
+
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                cell.setFillColor(grid[y][x]);
+                cell.setPosition(x * CELL_SIZE + offsetX, y * CELL_SIZE + offsetY);
+                window.draw(cell);
+            }
+        }
+
+        sf::RectangleShape line;
+        line.setFillColor(sf::Color(100, 100, 100, 50)); 
+
+        for (int i = 0; i <= cols; i++) {
+            line.setSize(sf::Vector2f(1, rows * CELL_SIZE));
+            line.setPosition(i * CELL_SIZE + offsetX, offsetY);
+            window.draw(line);
+        }
+
+        for (int i = 0; i <= rows; i++) {
+            line.setSize(sf::Vector2f(cols * CELL_SIZE, 1));
+            line.setPosition(offsetX, i * CELL_SIZE + offsetY);
+            window.draw(line);
+        }
+
+    }
+
+    void toggleSimulation() {
+        running = !running;
+    }
+
+    bool isRunning() const {
+        return running;
+    }
+
+    int getGeneration() const {
+        return generation;
+    }
+
+    int getChanges() const {
+        return changes;
+    }
+
+    sf::Color getCurrentColor() const {
+        return currentColor;
+    }
+};
+
 class GameOfLife {
 private:
     int rows, cols;
@@ -254,6 +507,12 @@ public:
         grid[y][x] = !grid[y][x];
     }
 
+    void setCell(int x, int y, int state) {
+        if (x >= 0 && x < cols && y >= 0 && y < rows) {
+            grid[y][x] = state;
+        }
+    }
+
     int countLiveCells() const {
         int count = 0;
         for (const auto& row : grid) {
@@ -262,6 +521,17 @@ public:
             }
         }
         return count;
+    }
+
+    void clear() {
+        for (auto& row : grid) {
+            for (auto& cell : row) {
+                if (cell) {
+                    cell = false;
+                }
+            }
+        }
+        generation = 0;
     }
 
     void change() {
@@ -356,8 +626,8 @@ public:
     int getChanges() const {
         return changes;
     }
-};
 
+};
 int main() {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -366,30 +636,71 @@ int main() {
     }
 
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
-    unsigned int size[2];
     unsigned int screenWidth = desktopMode.width;
     unsigned int screenHeight = desktopMode.height;
+
+    sf::RenderWindow typeWindow(sf::VideoMode(screenWidth, screenHeight), "Choose Simulation Type");
+    SimulationType simType = chooseSimulationType(typeWindow);
+    typeWindow.close();
+
+    unsigned int size[2];
     sf::RenderWindow Inputwindow(sf::VideoMode(screenWidth, screenHeight), "Input Fields Example");
     getInput(Inputwindow, screenWidth, screenHeight, size);
     int cols = size[0], rows = size[1];
-    sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight), "The Game of Life");
-    GameOfLife game(rows, cols);
 
-    sf::Text startText("Start", font, 20);
-    startText.setFillColor(sf::Color(71, 74, 81));
-    startText.setPosition(20, 25);
+    sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight),
+        simType == CLASSIC ? "The Game of Life" : "Colored Game of Life");
+
+    GameOfLife* classicGame = nullptr;
+    ColorGameOfLife* coloredGame = nullptr;
+
+    if (simType == CLASSIC) {
+        classicGame = new GameOfLife(rows, cols);
+    }
+    else {
+        coloredGame = new ColorGameOfLife(rows, cols);
+        coloredGame->setCurrentColor(255, 0, 0); 
+    }
+
+    sf::RectangleShape windowEnd(sf::Vector2f(800, 600));
+    windowEnd.setPosition(screenWidth / 2 - 400, screenHeight / 2 - 300);
+    windowEnd.setOutlineColor(sf::Color(71, 74, 81));
+    windowEnd.setFillColor(sf::Color(165, 165, 165));
+    windowEnd.setOutlineThickness(10);
+
+    sf::Text textEnd("End of simulation", font, 40);
+    textEnd.setFillColor(sf::Color(71, 74, 81));
+    textEnd.setPosition(windowEnd.getPosition().x + 300, windowEnd.getPosition().y + 280);
 
     sf::RectangleShape startButton(sf::Vector2f(200, 60));
     startButton.setPosition(10, 10);
     startButton.setFillColor(sf::Color(165, 165, 165));
 
+    sf::Text startText("Start", font, 20);
+    startText.setFillColor(sf::Color(71, 74, 81));
+    startText.setPosition(startButton.getPosition().x + 70, startButton.getPosition().y + 20);
+
     sf::RectangleShape generationButton(sf::Vector2f(200, 60));
-    generationButton.setPosition(10, 500);
+    generationButton.setPosition(10, 700);
     generationButton.setFillColor(sf::Color(165, 165, 165));
 
-    sf::Text generationText("", font, 20);
+    sf::Text generationText("Generation: 0", font, 20);
     generationText.setFillColor(sf::Color(71, 74, 81));
-    generationText.setPosition(generationButton.getPosition().x + 50, generationButton.getPosition().y + 20);
+    generationText.setPosition(generationButton.getPosition().x + 20, generationButton.getPosition().y + 20);
+
+    sf::RectangleShape colorInputBox(sf::Vector2f(200, 60));
+    colorInputBox.setPosition(10, 150);
+    colorInputBox.setFillColor(sf::Color(165, 165, 165));
+
+    sf::Text colorText("Color (RGB)", font, 20);
+    colorText.setFillColor(sf::Color(71, 74, 81));
+    colorText.setPosition(colorInputBox.getPosition().x + 40, colorInputBox.getPosition().y + 20);
+
+    sf::RectangleShape colorPreview(sf::Vector2f(50, 50));
+    colorPreview.setPosition(220, 150);
+    if (simType == COLORED) {
+        colorPreview.setFillColor(coloredGame->getCurrentColor());
+    }
 
     sf::RectangleShape setPattern(sf::Vector2f(200, 60));
     setPattern.setPosition(10, 80);
@@ -423,29 +734,25 @@ int main() {
     eightText.setFillColor(sf::Color(71, 74, 81));
     eightText.setPosition(70, 305);
 
-    sf::RectangleShape endScreen(sf::Vector2f(400, 200));
-    endScreen.setFillColor(sf::Color(165, 165, 165));
-    endScreen.setOutlineThickness(5);
-    endScreen.setOutlineColor(sf::Color(71, 74, 81));
-    endScreen.setPosition((screenWidth - 400) / 2, (screenHeight - 200) / 2);
-
     sf::Text Error("The field is too small for this pattern", font, 20);
-    Error.setPosition(screenWidth/2, 100);
+    Error.setPosition(screenWidth / 2, 100);
     Error.setFillColor(sf::Color(128, 24, 24));
 
-    sf::Text endText("Simulation is ended", font, 40);
-    endText.setFillColor(sf::Color(71, 74, 81));
-    endText.setPosition(
-        endScreen.getPosition().x + (endScreen.getSize().x - endText.getLocalBounds().width) / 2,
-        endScreen.getPosition().y + (endScreen.getSize().y - endText.getLocalBounds().height) / 2 -20
-    );
+    sf::RectangleShape Clear(sf::Vector2f(200, 60));
+    Clear.setPosition(10, 900);
+    Clear.setFillColor(sf::Color(165, 165, 165));
 
-    bool simulationEnded = false;
-    bool showPatternMenu = false;
-    bool showError = false;
+    sf::Text clearText("Clear", font, 20);
+    clearText.setPosition(70, 915);
+    clearText.setFillColor(sf::Color(71, 74, 81));
 
     sf::Clock clock;
-    bool isMousePressed = false;
+    bool simulationRunning = false;
+    bool showPatternMenu = false;
+    bool showError = false;
+    bool showColorDialog = false;
+    bool endSim = false;
+    std::string colorInput = "255,0,0";
 
     while (window.isOpen()) {
         sf::Event event;
@@ -454,124 +761,223 @@ int main() {
                 window.close();
             }
 
-
-            if (!simulationEnded && event.type == sf::Event::MouseButtonPressed) {
+            if (!endSim && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-
-                int offsetX = (window.getSize().x - cols * CELL_SIZE) / 2;
-                int offsetY = (window.getSize().y - rows * CELL_SIZE) / 2;
-
-                if (setPattern.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                    showPatternMenu = !showPatternMenu;
-                }
-
-                if (mousePos.y >= offsetY) {
-                    showError = false;
-                    int x = (mousePos.x - offsetX) / CELL_SIZE;
-                    int y = (mousePos.y - offsetY) / CELL_SIZE;
-                    if (x >= 0 && x < cols && y >= 0 && y < rows) {
-                        game.toggleCell(x, y);
+                   if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        simulationRunning = !simulationRunning;
+                        startText.setString(simulationRunning ? "Stop" : "Start");
+                        if (simType == CLASSIC) {
+                            classicGame->toggleSimulation();
+                        }
+                        else {
+                            coloredGame->toggleSimulation();
+                        }
                     }
-                }
-                else if (startButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                    showError = false;
-                    game.toggleSimulation();
-                    if (game.isRunning()) {
-                        startText.setString("Stop");
+                    else if (simType == COLORED && colorInputBox.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        showColorDialog = true;
+                        colorInput = "";
                     }
+                    else if (setPattern.getGlobalBounds().contains(mousePos.x, mousePos.y) && simType == CLASSIC) {
+                        showPatternMenu = !showPatternMenu;
+                    }
+                    else if (Clear.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                        if (simType == CLASSIC) {
+                            classicGame->clear();
+                        }
+                        else {
+                            coloredGame->clear();
+                        }
+                    }
+                    else if (showPatternMenu && simType == CLASSIC) {
+                       if (patternBlock.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                           if (rows >= 2 && cols >= 2) {
+                               showError = false;
+                               classicGame->setCell(cols / 2, rows / 2, 1);
+                               classicGame->setCell(cols / 2, rows / 2 - 1, 1);
+                               classicGame->setCell(cols / 2 - 1, rows / 2, 1);
+                               classicGame->setCell(cols / 2 - 1, rows / 2 - 1, 1);
+                               showPatternMenu = false;
+                           }
+                           else {
+                               showError = true;
+                           }
+                       }
+                       else if (patternGlider.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                           if (rows >= 3 && cols >= 3) {
+                               showError = false;
+                               classicGame->setCell(1, 0, 1);
+                               classicGame->setCell(2, 1, 1);
+                               classicGame->setCell(0, 2, 1);
+                               classicGame->setCell(1, 2, 1);
+                               classicGame->setCell(2, 2, 1);
+                               showPatternMenu = false;
+                           }
+                           else {
+                               showError = true;
+                           }
+                       }
+                       else if (patternEight.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                           if (rows >= 8 && cols >= 8) {
+                               int numEight = 2;
+                               showError = false;
+                               for (int i = 0; i <= numEight; i++) {
+                                   for (int j = 0; j <= numEight; j++) {
+                                       classicGame->setCell(cols / 2 - i - 1, rows / 2 - j - 1, 1);
+                                       classicGame->setCell(cols / 2 + i, rows / 2 + j, 1);
+                                   }
+                               }
+                               showPatternMenu = false;
+                           }
+                           else {
+                               showError = true;
+                           }
+                       }
+                   }
                     else {
-                        startText.setString("Start");
-                    }
-                }
-                else if (showPatternMenu) {
-                    if (patternBlock.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                        if (rows >= 2 && cols >= 2) {
-                            showError = false;
-                            game.toggleCell(cols / 2, rows / 2);
-                            game.toggleCell(cols / 2, rows / 2 - 1);
-                            game.toggleCell(cols / 2 - 1, rows / 2);
-                            game.toggleCell(cols / 2 - 1, rows / 2 - 1);
-                            showPatternMenu = false;
-                        }
-                        else {
-                            showError = true;
-                        }
-                    }
-                    else if (patternGlider.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                        if (rows >= 3 && cols >= 3) {
-                            showError = false;
-                            game.toggleCell(1, 0);
-                            game.toggleCell(2, 1);
-                            game.toggleCell(0, 2);
-                            game.toggleCell(1, 2);
-                            game.toggleCell(2, 2);
-                        }
-                        else {
-                            showError = true;
-                        }
-                    }
-                    else if (patternEight.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
-                        if (rows >= 8 && cols >= 8) {
-                            int numEight = 2;
-                            showError = false;
-                            for (int i = 0; i <= numEight; i++) {
-                                for (int j = 0; j <= numEight; j++) {
-                                    game.toggleCell(cols / 2 - i - 1, rows / 2 - j - 1);
-                                    game.toggleCell(cols / 2 + i, rows / 2 + j);
+                        int offsetX = (window.getSize().x - cols * CELL_SIZE) / 2;
+                        int offsetY = (window.getSize().y - rows * CELL_SIZE) / 2;
+
+                        if (mousePos.x >= offsetX && mousePos.y >= offsetY) {
+                            int x = (mousePos.x - offsetX) / CELL_SIZE;
+                            int y = (mousePos.y - offsetY) / CELL_SIZE;
+
+                            if (x >= 0 && x < cols && y >= 0 && y < rows) {
+                                if (simType == CLASSIC) {
+                                    classicGame->toggleCell(x, y);
+                                }
+                                else {
+                                    coloredGame->toggleCell(x, y);
                                 }
                             }
-                        }
-                        else {
-                            showError = true;
+                            
                         }
                     }
+                }
+            else {
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    endSim = false;
+                    if (simType == CLASSIC) {
+                        classicGame->clear();
+                    }
+                    else {
+                        coloredGame->clear();
+                    }
+                }
+            }
+            if (showColorDialog && event.type == sf::Event::TextEntered) {
+                if (event.text.unicode == '\r') {
+                    showColorDialog = false;
+                    if (simType == COLORED) {
+                        std::istringstream iss(colorInput);
+                        int r, g, b;
+                        char comma;
+                        if (iss >> r >> comma >> g >> comma >> b) {
+                            coloredGame->setCurrentColor(r, g, b);
+                            colorPreview.setFillColor(coloredGame->getCurrentColor());
+                        }
+                    }
+                }
+                else if (event.text.unicode == '\b') {
+                    if (!colorInput.empty()) colorInput.pop_back();
+                }
+                else if (event.text.unicode >= '0' && event.text.unicode <= '9' || event.text.unicode == ',') {
+                    colorInput += static_cast<char>(event.text.unicode);
                 }
             }
         }
 
-        if (!simulationEnded && clock.getElapsedTime().asSeconds() >= UPDATE_TIME && game.isRunning()) {
-            game.change();
-            clock.restart();
-
-            if (game.countLiveCells() == 0) {
-                simulationEnded = true;
-                game.toggleSimulation();
+        if (simulationRunning && clock.getElapsedTime().asSeconds() >= UPDATE_TIME) {
+            if (simType == CLASSIC) {
+                classicGame->change();
+                if (classicGame->countLiveCells() == 0) {
+                    simulationRunning = false;
+                    classicGame->toggleSimulation();
+                    startText.setString("Start");
+                    endSim = true;
+                }
             }
+            else {
+                coloredGame->change();
+                if (coloredGame->countLiveCells() == 0) {
+                    simulationRunning = false;
+                    coloredGame->toggleSimulation();
+                    startText.setString("Start");
+                    endSim = true;
+                }
+            }
+            clock.restart();
+            generationText.setString("Generation: " + std::to_string(
+                simType == CLASSIC ? classicGame->getGeneration() : coloredGame->getGeneration()));
         }
-
-        std::stringstream ss;
-        ss << "Generation: " << game.getGeneration();
-        generationText.setString(ss.str());
 
         window.clear(sf::Color(220, 220, 220));
-        game.draw(window);
+
+        if (simType == CLASSIC) {
+            classicGame->draw(window);
+        }
+        else {
+            coloredGame->draw(window);
+        }
+
         window.draw(startButton);
+        window.draw(startText);
         window.draw(generationButton);
         window.draw(generationText);
-        window.draw(startText);
-        window.draw(setPattern); 
-        window.draw(patternsText);
+        window.draw(Clear);
+        window.draw(clearText);
 
-        if (showPatternMenu) {
-            window.draw(patternBlock);
-            window.draw(patternGlider);
-            window.draw(blockText);
-            window.draw(gliderText);
-            window.draw(patternEight);
-            window.draw(eightText);
+        if (simType == COLORED) {
+            window.draw(colorInputBox);
+            window.draw(colorText);
+            window.draw(colorPreview);
+
+            if (showColorDialog) {
+                sf::RectangleShape dialog(sf::Vector2f(300, 100));
+                dialog.setFillColor(sf::Color(200, 200, 200));
+                dialog.setPosition(window.getSize().x / 2 - 150, window.getSize().y / 2 - 50);
+
+                sf::Text prompt("Enter RGB (e.g. 255,0,0):", font, 20);
+                prompt.setFillColor(sf::Color::Black);
+                prompt.setPosition(dialog.getPosition().x + 10, dialog.getPosition().y + 10);
+
+                sf::Text inputText(colorInput, font, 20);
+                inputText.setFillColor(sf::Color::Black);
+                inputText.setPosition(dialog.getPosition().x + 10, dialog.getPosition().y + 40);
+
+                window.draw(dialog);
+                window.draw(prompt);
+                window.draw(inputText);
+            }
+        }
+        else {
+            window.draw(setPattern);
+            window.draw(patternsText);
+
+            if (showPatternMenu) {
+                window.draw(patternBlock);
+                window.draw(patternGlider);
+                window.draw(blockText);
+                window.draw(gliderText);
+                window.draw(patternEight);
+                window.draw(eightText);
+            }
+
+            if (showError) {
+                window.draw(Error);
+            }
+
+
         }
 
-        if (showError) {
-            window.draw(Error);
-        }
-
-        if (simulationEnded) {
-            window.draw(endScreen);
-            window.draw(endText);
+        if (endSim) {
+            window.draw(windowEnd);
+            window.draw(textEnd);
         }
 
         window.display();
     }
+    if (classicGame) delete classicGame;
+    if (coloredGame) delete coloredGame;
 
     return 0;
 }
