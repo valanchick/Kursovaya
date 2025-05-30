@@ -6,13 +6,129 @@
 #include <map>
 #include <numeric>
 #include <tuple>
+#include <cmath>
 
-const int CELL_SIZE = 30;
-const float UPDATE_TIME = 1.0f;
+
+// константные значения для олзунка скорости
+const float SLIDER_WIDTH = 300;
+const float SLIDER_HEIGHT = 20;
+const float KNOB_RADIUS = 15;
+const std::vector<float> MARK_POSITIONS = { 1.0f, 1.5f, 1.75f, 2.0f, 2.5f };
+
 const int PADDING = 50;
 
 enum SimulationType { CLASSIC, COLORED };
+//класс для создания ползунка для выбора скорости от 1.0 до 2.5 по определённым меткам
+class Slider {
+private:
+    sf::RectangleShape track;
+    sf::CircleShape knob;
+    std::vector<sf::CircleShape> marks;
+    float minValue;
+    float maxValue;
+    float currentValue;
+    bool isDragging;
 
+public:
+    Slider(float x, float y, float min, float max)
+        : minValue(min), maxValue(max), currentValue(min), isDragging(false) {
+
+        //создание линии ползунка
+        track.setSize(sf::Vector2f(SLIDER_WIDTH, SLIDER_HEIGHT));
+        track.setPosition(x, y);
+        track.setFillColor(sf::Color(100, 100, 100));
+
+        //создание круга для перемещения
+        knob.setRadius(KNOB_RADIUS);
+        knob.setOrigin(KNOB_RADIUS, KNOB_RADIUS);
+        knob.setFillColor(sf::Color::White);
+        knob.setOutlineThickness(2);
+        knob.setOutlineColor(sf::Color::Black);
+
+        //выставление меток на линии ползунка
+        for (float value : MARK_POSITIONS) {
+            sf::CircleShape mark(5);
+            mark.setOrigin(5, 5);
+            mark.setFillColor(sf::Color::Black);
+            marks.push_back(mark);
+        }
+
+        updateVisuals();
+    }
+    //обработка действий мыши с ползунком
+    void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
+        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+        if (event.type == sf::Event::MouseButtonPressed) {
+            if (knob.getGlobalBounds().contains(mousePos)) {
+                isDragging = true;
+            }
+        }
+        else if (event.type == sf::Event::MouseButtonReleased) {
+            isDragging = false;
+            snapToNearestMark();
+        }
+        else if (event.type == sf::Event::MouseMoved && isDragging) {
+            float newX = std::max(track.getPosition().x,
+                std::min(mousePos.x, track.getPosition().x + SLIDER_WIDTH));
+            float normalized = (newX - track.getPosition().x) / SLIDER_WIDTH;
+            currentValue = minValue + normalized * (maxValue - minValue);
+            snapToNearestMark();
+        }
+    }
+    //находим ближайшую отметку
+    void snapToNearestMark() {
+        float closest = MARK_POSITIONS[0];
+        float minDist = std::abs(currentValue - closest);
+
+        for (float mark : MARK_POSITIONS) {
+            float dist = std::abs(currentValue - mark);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = mark;
+            }
+        }
+
+        currentValue = closest;
+        updateVisuals();
+    }
+    //обновляем информацию о местоположении 
+    void updateVisuals() {
+        float normalized = (currentValue - minValue) / (maxValue - minValue);
+        float knobX = track.getPosition().x + normalized * SLIDER_WIDTH;
+        knob.setPosition(knobX, track.getPosition().y + SLIDER_HEIGHT / 2);
+
+        for (size_t i = 0; i < MARK_POSITIONS.size(); ++i) {
+            float markNormalized = (MARK_POSITIONS[i] - minValue) / (maxValue - minValue);
+            float markX = track.getPosition().x + markNormalized * SLIDER_WIDTH;
+            marks[i].setPosition(markX, track.getPosition().y + SLIDER_HEIGHT + 15);
+        }
+    }
+    //получение значений скорости
+    float getValue() const {
+        return currentValue;
+    }
+    // рисуем графические элементы
+    void draw(sf::RenderWindow& window) {
+        window.draw(track);
+
+        for (const auto& mark : marks) {
+            window.draw(mark);
+        }
+
+        window.draw(knob);
+
+        // Draw value text (simplified version without font loading)
+        sf::Text valueText;
+        valueText.setString(std::to_string(currentValue));
+        valueText.setCharacterSize(20);
+        valueText.setFillColor(sf::Color::Black);
+        valueText.setPosition(track.getPosition().x + SLIDER_WIDTH + 20,
+            track.getPosition().y - 10);
+        window.draw(valueText);
+    }
+};
+//выбор типа симуляции
 SimulationType chooseSimulationType(sf::RenderWindow& window) {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -71,7 +187,7 @@ SimulationType chooseSimulationType(sf::RenderWindow& window) {
 
     return CLASSIC;
 }
-
+//ввод размеров поля
 void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int screenHeight, unsigned int size[]) {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -99,18 +215,18 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
     heightText.setFillColor(sf::Color(71, 74, 81));
     heightText.setPosition(heightInputBox.getPosition().x + 10, heightInputBox.getPosition().y + 10);
 
-    sf::Text widthLabel("Enter the number of cells in width (1-25):", font, 24);
+    sf::Text widthLabel("Enter the number of cells in width (1-150):", font, 24);
     widthLabel.setFillColor(sf::Color(71, 74, 81));
     widthLabel.setPosition(widthInputBox.getPosition().x, widthInputBox.getPosition().y - 35);
 
-    sf::Text heightLabel("Enter the number of cells in height (1-25):", font, 24);
+    sf::Text heightLabel("Enter the number of cells in height (1-150):", font, 24);
     heightLabel.setFillColor(sf::Color(71, 74, 81));
     heightLabel.setPosition(heightInputBox.getPosition().x, heightInputBox.getPosition().y - 35);
 
-    sf::Text errorText("Please enter values between 1 and 25", font, 24);
+    sf::Text errorText("Please enter values between 1 and 100", font, 24);
     errorText.setFillColor(sf::Color(128, 24, 24));
     errorText.setPosition(screenWidth / 2 - errorText.getLocalBounds().width / 2, screenHeight / 2 - 500);
-
+    //поле видимости текста в поле ввода
     sf::View textView_1;
     textView_1.setViewport(sf::FloatRect(
         widthInputBox.getPosition().x / screenWidth,
@@ -137,7 +253,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
     bool showError = false;
     float widthScrollOffset = 0.0f;
     float heightScrollOffset = 0.0f;
-    const float scrollSpeed = 10.0f;
+    const float scrollSpeed = 10.0f; //смещение текста в полях ввода
 
     widthText.setPosition(10 - widthScrollOffset, 10);
     heightText.setPosition(10 - heightScrollOffset, 10);
@@ -147,7 +263,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
-
+            //выбор поля ввода
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
                     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
@@ -161,23 +277,25 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                         (heightComplete ? sf::Color(106, 95, 49) : sf::Color(71, 74, 81)));
                 }
             }
-
+            // ввод значений в поле ввоода
             if (event.type == sf::Event::TextEntered) {
                 bool isDigit = (event.text.unicode >= '0' && event.text.unicode <= '9');
                 bool isControlChar = (event.text.unicode == '\b' || event.text.unicode == '\r');
-
+                //для первого поля
                 if (widthActive && (isDigit || isControlChar)) {
+                    //обработка события backspace
                     if (event.text.unicode == '\b') {
                         if (!widthInput.empty()) {
                             widthInput.pop_back();
                             widthScrollOffset = std::max(0.0f, widthScrollOffset - scrollSpeed);
                         }
                     }
+                    //обработка события enter
                     else if (event.text.unicode == '\r') {
                         if (!widthInput.empty()) {
                             try {
                                 int value = std::stoi(widthInput);
-                                if (value >= 1 && value <= 25) {
+                                if (value >= 1 && value <= 150) {
                                     widthComplete = true;
                                     widthInputBox.setOutlineColor(sf::Color::Green);
                                     showError = false;
@@ -200,6 +318,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                     }
                     widthText.setString(widthInput);
                 }
+                //для второго поля
                 else if (heightActive && (isDigit || isControlChar)) {
                     if (event.text.unicode == '\b') {
                         if (!heightInput.empty()) {
@@ -211,7 +330,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                         if (!heightInput.empty()) {
                             try {
                                 int value = std::stoi(heightInput);
-                                if (value >= 1 && value <= 25) {
+                                if (value >= 1 && value <= 150) {
                                     heightComplete = true;
                                     heightInputBox.setOutlineColor(sf::Color::Green);
                                     showError = false;
@@ -235,7 +354,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                     heightText.setString(heightInput);
                 }
             }
-
+            //движение текста в поле вввода
             if (event.type == sf::Event::KeyPressed) {
                 if (widthActive) {
                     if (event.key.code == sf::Keyboard::Left) {
@@ -267,7 +386,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                 }
             }
         }
-
+        //вывод элементов графического интерфейса
         window.clear(sf::Color(220, 220, 220));
 
         window.draw(widthLabel);
@@ -300,10 +419,16 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
         window.display();
     }
 }
-
+//вычмсление размера клетки в зависимости от размеров поля
+int getCellSize(int cols, int rows, int screenWidth, int screenHeight) {
+    int maxCellWidth = (screenWidth - 200) / cols;
+    int maxCellHeight = (screenHeight - 200) / rows;
+    return std::min(maxCellWidth, maxCellHeight);
+}
+//класс для правил цветной симуляции
 class ColorGameOfLife {
 private:
-    int rows, cols;
+    int rows, cols, CELL_SIZE;
     std::vector<std::vector<sf::Color>> grid;
     bool running = false;
     int generation = 0;
@@ -351,7 +476,7 @@ private:
     }
 
 public:
-    ColorGameOfLife(int rows, int cols) : rows(rows), cols(cols) {
+    ColorGameOfLife(int rows, int cols, int CELL_SIZE) : rows(rows), cols(cols), CELL_SIZE(CELL_SIZE) {
         grid.resize(rows, std::vector<sf::Color>(cols, sf::Color::Transparent));
     }
 
@@ -492,14 +617,14 @@ public:
 
 class GameOfLife {
 private:
-    int rows, cols;
+    int rows, cols, CELL_SIZE;
     std::vector<std::vector<int>> grid;
     bool running = false;
     int generation = 0;
     int changes = 0;
 
 public:
-    GameOfLife(int rows, int cols) : rows(rows), cols(cols) {
+    GameOfLife(int rows, int cols, int CELL_SIZE) : rows(rows), cols(cols), CELL_SIZE(CELL_SIZE) {
         grid.resize(rows, std::vector<int>(cols, 0));
     }
 
@@ -628,6 +753,7 @@ public:
     }
 
 };
+
 int main() {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -639,6 +765,8 @@ int main() {
     unsigned int screenWidth = desktopMode.width;
     unsigned int screenHeight = desktopMode.height;
 
+    Slider slider(screenWidth-400, 80, 1.0f, 2.5f);
+
     sf::RenderWindow typeWindow(sf::VideoMode(screenWidth, screenHeight), "Choose Simulation Type");
     SimulationType simType = chooseSimulationType(typeWindow);
     typeWindow.close();
@@ -648,6 +776,8 @@ int main() {
     getInput(Inputwindow, screenWidth, screenHeight, size);
     int cols = size[0], rows = size[1];
 
+    int CELL_SIZE = getCellSize(cols, rows, screenWidth, screenHeight);
+
     sf::RenderWindow window(sf::VideoMode(screenWidth, screenHeight),
         simType == CLASSIC ? "The Game of Life" : "Colored Game of Life");
 
@@ -655,10 +785,10 @@ int main() {
     ColorGameOfLife* coloredGame = nullptr;
 
     if (simType == CLASSIC) {
-        classicGame = new GameOfLife(rows, cols);
+        classicGame = new GameOfLife(rows, cols, CELL_SIZE);
     }
     else {
-        coloredGame = new ColorGameOfLife(rows, cols);
+        coloredGame = new ColorGameOfLife(rows, cols, CELL_SIZE);
         coloredGame->setCurrentColor(255, 0, 0); 
     }
 
@@ -746,12 +876,28 @@ int main() {
     clearText.setPosition(70, 915);
     clearText.setFillColor(sf::Color(71, 74, 81));
 
+    sf::RectangleShape ruleWindow(sf::Vector2f(800, 600));
+    ruleWindow.setPosition(screenWidth / 2 - 400, screenHeight / 2 - 300);
+    ruleWindow.setFillColor(sf::Color(165, 165, 165));
+    ruleWindow.setOutlineThickness(10);
+    ruleWindow.setOutlineColor(sf::Color(71, 74, 81));
+
+    sf::Text ruleClassicText("Survival:\n    A live cell remains alive if it has 2 or 3 live neighbors.\nDeath:\n    From loneliness(fewer than 2 neighbors)\n    From overpopulation(more than 3 neighbors)\nBirth:\n    A dead cell comes to life if it has exactly 3 live neighbors.", font, 28);
+    ruleClassicText.setPosition(ruleWindow.getPosition().x + 100, ruleWindow.getPosition().y + 120);
+    ruleClassicText.setFillColor(sf::Color(71, 74, 81));
+
+    sf::Text ruleColoredText("Survival:\n    A live cell remains alive if it has 2 or 3 live neighbors. Its color is determined by the average color of its neighbors\nDeath:\n    From loneliness (fewer than 2 neighbors)\n    From overpopulation (more than 3 neighbors)\nBirth:\n    A dead cell comes to life if it has exactly 3 live neighbors. Its color is determined by the average color of its neighbors", font, 28);
+    ruleColoredText.setPosition(ruleWindow.getPosition().x + 100, ruleWindow.getPosition().y + 120);
+    ruleColoredText.setFillColor(sf::Color(71, 74, 81));
+    
+
     sf::Clock clock;
     bool simulationRunning = false;
     bool showPatternMenu = false;
     bool showError = false;
     bool showColorDialog = false;
     bool endSim = false;
+    bool showRules = false;
     std::string colorInput = "255,0,0";
 
     while (window.isOpen()) {
@@ -759,6 +905,10 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close();
+            }
+            slider.handleEvent(event, window);
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Q) {
+                showRules = !showRules;
             }
 
             if (!endSim && event.type == sf::Event::MouseButtonPressed) {
@@ -792,6 +942,7 @@ int main() {
                        if (patternBlock.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                            if (rows >= 2 && cols >= 2) {
                                showError = false;
+                               classicGame->clear();
                                classicGame->setCell(cols / 2, rows / 2, 1);
                                classicGame->setCell(cols / 2, rows / 2 - 1, 1);
                                classicGame->setCell(cols / 2 - 1, rows / 2, 1);
@@ -805,6 +956,7 @@ int main() {
                        else if (patternGlider.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                            if (rows >= 3 && cols >= 3) {
                                showError = false;
+                               classicGame->clear();
                                classicGame->setCell(1, 0, 1);
                                classicGame->setCell(2, 1, 1);
                                classicGame->setCell(0, 2, 1);
@@ -818,6 +970,7 @@ int main() {
                        }
                        else if (patternEight.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                            if (rows >= 8 && cols >= 8) {
+                               classicGame->clear();
                                int numEight = 2;
                                showError = false;
                                for (int i = 0; i <= numEight; i++) {
@@ -886,7 +1039,7 @@ int main() {
             }
         }
 
-        if (simulationRunning && clock.getElapsedTime().asSeconds() >= UPDATE_TIME) {
+        if (simulationRunning && clock.getElapsedTime().asSeconds() >= 1.0f / slider.getValue()) {
             if (simType == CLASSIC) {
                 classicGame->change();
                 if (classicGame->countLiveCells() == 0) {
@@ -925,6 +1078,7 @@ int main() {
         window.draw(generationText);
         window.draw(Clear);
         window.draw(clearText);
+        slider.draw(window);
 
         if (simType == COLORED) {
             window.draw(colorInputBox);
@@ -948,6 +1102,11 @@ int main() {
                 window.draw(prompt);
                 window.draw(inputText);
             }
+
+            if (showRules) {
+                window.draw(ruleWindow);
+                window.draw(ruleColoredText);
+            }
         }
         else {
             window.draw(setPattern);
@@ -964,6 +1123,11 @@ int main() {
 
             if (showError) {
                 window.draw(Error);
+            }
+
+            if (showRules) {
+                window.draw(ruleWindow);
+                window.draw(ruleClassicText);
             }
 
 
