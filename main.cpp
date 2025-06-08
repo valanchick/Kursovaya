@@ -471,8 +471,8 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
 }
 //вычисление размера клетки в зависимости от размеров поля
 int getCellSize(int cols, int rows, int screenWidth, int screenHeight) {
-    int maxCellWidth = (screenWidth - 600) / cols;
-    int maxCellHeight = (screenHeight - 400) / rows;
+    int maxCellWidth = (screenWidth - 800) / cols;
+    int maxCellHeight = (screenHeight - 200) / rows;
     return std::min(maxCellWidth, maxCellHeight);
 }
 //класс для правил чб симуляции
@@ -1488,6 +1488,9 @@ int main() {
                         }
                     }
                     slider.handleEvent(event, window);
+                    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Q) {
+                        showRules = !showRules;
+                    }
                     cellCountControl.handleEvent(event, window);
                     int newRows = cellCountControl.getRows();
                     int newCols = cellCountControl.getCols();
