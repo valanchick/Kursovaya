@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <vector>
 #include <iostream>
 #include <sstream>
@@ -8,15 +9,20 @@
 #include <tuple>
 #include <cmath>
 
-
-// ÍÓÌÒÚ‡ÌÚÌ˚Â ÁÌ‡˜ÂÌËˇ ‰Îˇ ÔÓÎÁÛÌÍ‡ ÒÍÓÓÒÚË
+// –∫–æ–Ω—Å—Ç–∞–Ω—Ç–Ω—ã–µ –∑–Ω–∞—á–µ–Ω–∏—è –¥–ª—è –ø–æ–ª–∑—É–Ω–∫–∞ —Å–∫–æ—Ä–æ—Å—Ç–∏
 const float SLIDER_WIDTH = 300;
 const float SLIDER_HEIGHT = 20;
 const float KNOB_RADIUS = 15;
 const std::vector<float> MARK_POSITIONS = { 1.0f, 1.5f, 1.75f, 2.0f, 2.5f };
 
+const std::vector<std::string> MUSIC_FILES = {
+    "music 1.mp3",
+    "music 2.mp3",
+    "music 3.mp3"
+};
+
 enum SimulationType { CLASSIC, COLORED, CHESS, EXIT };
-//ÍÎ‡ÒÒ ‰Îˇ ÒÓÁ‰‡ÌËˇ ÔÓÎÁÛÌÍ‡ ‰Îˇ ‚˚·Ó‡ ÒÍÓÓÒÚË ÓÚ 1.0 ‰Ó 2.5 ÔÓ ÓÔÂ‰ÂÎ∏ÌÌ˚Ï ÏÂÚÍ‡Ï
+//–∫–ª–∞—Å—Å –¥–ª—è —Å–æ–∑–¥–∞–Ω–∏—è –ø–æ–ª–∑—É–Ω–∫–∞ –¥–ª—è –≤—ã–±–æ—Ä–∞ —Å–∫–æ—Ä–æ—Å—Ç–∏ –æ—Ç 1.0 –¥–æ 2.5 –ø–æ –æ–ø—Ä–µ–¥–µ–ª—ë–Ω–Ω—ã–º –º–µ—Ç–∫–∞–º
 class Slider {
 private:
     sf::RectangleShape track;
@@ -31,19 +37,19 @@ public:
     Slider(float x, float y, float min, float max)
         : minValue(min), maxValue(max), currentValue(min), isDragging(false) {
 
-        //ÒÓÁ‰‡ÌËÂ ÎËÌËË ÔÓÎÁÛÌÍ‡
+        //—Å–æ–∑–¥–∞–Ω–∏–µ –ª–∏–Ω–∏–∏ –ø–æ–ª–∑—É–Ω–∫–∞
         track.setSize(sf::Vector2f(SLIDER_WIDTH, SLIDER_HEIGHT));
         track.setPosition(x, y);
         track.setFillColor(sf::Color(100, 100, 100));
 
-        //ÒÓÁ‰‡ÌËÂ ÍÛ„‡ ‰Îˇ ÔÂÂÏÂ˘ÂÌËˇ
+        //—Å–æ–∑–¥–∞–Ω–∏–µ –∫—Ä—É–≥–∞ –¥–ª—è –ø–µ—Ä–µ–º–µ—â–µ–Ω–∏—è
         knob.setRadius(KNOB_RADIUS);
         knob.setOrigin(KNOB_RADIUS, KNOB_RADIUS);
         knob.setFillColor(sf::Color::White);
         knob.setOutlineThickness(2);
         knob.setOutlineColor(sf::Color::Black);
 
-        //‚˚ÒÚ‡‚ÎÂÌËÂ ÏÂÚÓÍ Ì‡ ÎËÌËË ÔÓÎÁÛÌÍ‡
+        //–≤—ã—Å—Ç–∞–≤–ª–µ–Ω–∏–µ –º–µ—Ç–æ–∫ –Ω–∞ –ª–∏–Ω–∏–∏ –ø–æ–ª–∑—É–Ω–∫–∞
         for (float value : MARK_POSITIONS) {
             sf::CircleShape mark(5);
             mark.setOrigin(5, 5);
@@ -53,7 +59,7 @@ public:
 
         updateVisuals();
     }
-    //Ó·‡·ÓÚÍ‡ ‰ÂÈÒÚ‚ËÈ Ï˚¯Ë Ò ÔÓÎÁÛÌÍÓÏ
+    //–æ–±—Ä–∞–±–æ—Ç–∫–∞ –¥–µ–π—Å—Ç–≤–∏–π –º—ã—à–∏ —Å –ø–æ–ª–∑—É–Ω–∫–æ–º
     void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -74,7 +80,7 @@ public:
             snapToNearestMark();
         }
     }
-    //Ì‡ıÓ‰ËÏ ·ÎËÊ‡È¯Û˛ ÓÚÏÂÚÍÛ
+    //–Ω–∞—Ö–æ–¥–∏–º –±–ª–∏–∂–∞–π—à—É—é –æ—Ç–º–µ—Ç–∫—É
     void snapToNearestMark() {
         float closest = MARK_POSITIONS[0];
         float minDist = std::abs(currentValue - closest);
@@ -90,7 +96,7 @@ public:
         currentValue = closest;
         updateVisuals();
     }
-    //Ó·ÌÓ‚ÎˇÂÏ ËÌÙÓÏ‡ˆË˛ Ó ÏÂÒÚÓÔÓÎÓÊÂÌËË 
+    //–æ–±–Ω–æ–≤–ª—è–µ–º –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏—é –æ –º–µ—Å—Ç–æ–ø–æ–ª–æ–∂–µ–Ω–∏–∏ 
     void updateVisuals() {
         float normalized = (currentValue - minValue) / (maxValue - minValue);
         float knobX = track.getPosition().x + normalized * SLIDER_WIDTH;
@@ -102,11 +108,11 @@ public:
             marks[i].setPosition(markX, track.getPosition().y + SLIDER_HEIGHT + 15);
         }
     }
-    //ÔÓÎÛ˜ÂÌËÂ ÁÌ‡˜ÂÌËÈ ÒÍÓÓÒÚË
+    //–ø–æ–ª—É—á–µ–Ω–∏–µ –∑–Ω–∞—á–µ–Ω–∏–π —Å–∫–æ—Ä–æ—Å—Ç–∏
     float getValue() const {
         return currentValue;
     }
-    // ËÒÛÂÏ „‡ÙË˜ÂÒÍËÂ ˝ÎÂÏÂÌÚ˚
+    // —Ä–∏—Å—É–µ–º –≥—Ä–∞—Ñ–∏—á–µ—Å–∫–∏–µ —ç–ª–µ–º–µ–Ω—Ç—ã
     void draw(sf::RenderWindow& window) {
         window.draw(track);
 
@@ -126,7 +132,7 @@ public:
         window.draw(valueText);
     }
 };
-//‚˚·Ó ÚËÔ‡ ÒËÏÛÎˇˆËË
+//–≤—ã–±–æ—Ä —Ç–∏–ø–∞ —Å–∏–º—É–ª—è—Ü–∏–∏
 SimulationType chooseSimulationType(sf::RenderWindow& window) {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -199,7 +205,7 @@ SimulationType chooseSimulationType(sf::RenderWindow& window) {
 
     return EXIT;
 }
-//‚‚Ó‰ ‡ÁÏÂÓ‚ ÔÓÎˇ
+//–≤–≤–æ–¥ —Ä–∞–∑–º–µ—Ä–æ–≤ –ø–æ–ª—è
 void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int screenHeight, unsigned int size[], SimulationType& simType) {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -245,7 +251,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
     errorText.setFillColor(sf::Color(128, 24, 24));
     errorText.setPosition(screenWidth / 2 - errorText.getLocalBounds().width / 2, screenHeight / 2 - 300);
 
-    //ÔÓÎÂ ‚Ë‰ËÏÓÒÚË ÚÂÍÒÚ‡ ‚ ÔÓÎÂ ‚‚Ó‰‡
+    //–ø–æ–ª–µ –≤–∏–¥–∏–º–æ—Å—Ç–∏ —Ç–µ–∫—Å—Ç–∞ –≤ –ø–æ–ª–µ –≤–≤–æ–¥–∞
     sf::View textView_1;
     textView_1.setViewport(sf::FloatRect(
         widthInputBox.getPosition().x / screenWidth,
@@ -272,7 +278,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
     bool showError = false;
     float widthScrollOffset = 0.0f;
     float heightScrollOffset = 0.0f;
-    const float scrollSpeed = 10.0f; //ÒÏÂ˘ÂÌËÂ ÚÂÍÒÚ‡ ‚ ÔÓÎˇı ‚‚Ó‰‡
+    const float scrollSpeed = 10.0f; //—Å–º–µ—â–µ–Ω–∏–µ —Ç–µ–∫—Å—Ç–∞ –≤ –ø–æ–ª—è—Ö –≤–≤–æ–¥–∞
 
     widthText.setPosition(10 - widthScrollOffset, 10);
     heightText.setPosition(10 - heightScrollOffset, 10);
@@ -298,18 +304,18 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                 return;
             }
 
-            //‚˚·Ó ÔÓÎˇ ‚‚Ó‰‡
+            //–≤—ã–±–æ—Ä –ø–æ–ª—è –≤–≤–æ–¥–∞
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
                     sf::Vector2f mousePos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
 
-                    // ÔÓ‚ÂÍ‡ Ì‡Ê‡ÚËˇ Ì‡ ÍÌÓÔÍÛ "Õ‡Á‡‰"
+                    // –ø—Ä–æ–≤–µ—Ä–∫–∞ –Ω–∞–∂–∞—Ç–∏—è –Ω–∞ –∫–Ω–æ–ø–∫—É "–ù–∞–∑–∞–¥"
                     if (backButton.getGlobalBounds().contains(mousePos)) {
                         window.close();
                         return;
                     }
 
-                    // ‚˚·Ó ÔÓÎˇ ‚‚Ó‰‡
+                    // –≤—ã–±–æ—Ä –ø–æ–ª—è –≤–≤–æ–¥–∞
                     widthActive = widthInputBox.getGlobalBounds().contains(mousePos) && !widthComplete;
                     heightActive = heightInputBox.getGlobalBounds().contains(mousePos) && !heightComplete;
 
@@ -319,20 +325,20 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                         (heightComplete ? sf::Color(106, 95, 49) : sf::Color(71, 74, 81)));
                 }
             }
-            // ‚‚Ó‰ ÁÌ‡˜ÂÌËÈ ‚ ÔÓÎÂ ‚‚ÓÓ‰‡
+            // –≤–≤–æ–¥ –∑–Ω–∞—á–µ–Ω–∏–π –≤ –ø–æ–ª–µ –≤–≤–æ–æ–¥–∞
             if (event.type == sf::Event::TextEntered) {
                 bool isDigit = (event.text.unicode >= '0' && event.text.unicode <= '9');
                 bool isControlChar = (event.text.unicode == '\b' || event.text.unicode == '\r');
-                //‰Îˇ ÔÂ‚Ó„Ó ÔÓÎˇ
+                //–¥–ª—è –ø–µ—Ä–≤–æ–≥–æ –ø–æ–ª—è
                 if (widthActive && (isDigit || isControlChar)) {
-                    //Ó·‡·ÓÚÍ‡ ÒÓ·˚ÚËˇ backspace
+                    //–æ–±—Ä–∞–±–æ—Ç–∫–∞ —Å–æ–±—ã—Ç–∏—è backspace
                     if (event.text.unicode == '\b') {
                         if (!widthInput.empty()) {
                             widthInput.pop_back();
                             widthScrollOffset = std::max(0.0f, widthScrollOffset - scrollSpeed);
                         }
                     }
-                    //Ó·‡·ÓÚÍ‡ ÒÓ·˚ÚËˇ enter
+                    //–æ–±—Ä–∞–±–æ—Ç–∫–∞ —Å–æ–±—ã—Ç–∏—è enter
                     else if (event.text.unicode == '\r') {
                         if (!widthInput.empty()) {
                             try {
@@ -360,7 +366,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                     }
                     widthText.setString(widthInput);
                 }
-                //‰Îˇ ‚ÚÓÓ„Ó ÔÓÎˇ
+                //–¥–ª—è –≤—Ç–æ—Ä–æ–≥–æ –ø–æ–ª—è
                 else if (heightActive && (isDigit || isControlChar)) {
                     if (event.text.unicode == '\b') {
                         if (!heightInput.empty()) {
@@ -396,7 +402,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                     heightText.setString(heightInput);
                 }
             }
-            //‰‚ËÊÂÌËÂ ÚÂÍÒÚ‡ ‚ ÔÓÎÂ ‚‚‚Ó‰‡
+            //–¥–≤–∏–∂–µ–Ω–∏–µ —Ç–µ–∫—Å—Ç–∞ –≤ –ø–æ–ª–µ –≤–≤–≤–æ–¥–∞
             if (event.type == sf::Event::KeyPressed) {
                 if (widthActive) {
                     if (event.key.code == sf::Keyboard::Left) {
@@ -428,7 +434,7 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
                 }
             }
         }
-        //‚˚‚Ó‰ ˝ÎÂÏÂÌÚÓ‚ „‡ÙË˜ÂÒÍÓ„Ó ËÌÚÂÙÂÈÒ‡
+        //–≤—ã–≤–æ–¥ —ç–ª–µ–º–µ–Ω—Ç–æ–≤ –≥—Ä–∞—Ñ–∏—á–µ—Å–∫–æ–≥–æ –∏–Ω—Ç–µ—Ä—Ñ–µ–π—Å–∞
         window.clear(sf::Color(220, 220, 220));
 
         window.draw(backButton);
@@ -463,13 +469,13 @@ void getInput(sf::RenderWindow& window, unsigned int screenWidth, unsigned int s
         window.display();
     }
 }
-//‚˚˜ËÒÎÂÌËÂ ‡ÁÏÂ‡ ÍÎÂÚÍË ‚ Á‡‚ËÒËÏÓÒÚË ÓÚ ‡ÁÏÂÓ‚ ÔÓÎˇ
+//–≤—ã—á–∏—Å–ª–µ–Ω–∏–µ —Ä–∞–∑–º–µ—Ä–∞ –∫–ª–µ—Ç–∫–∏ –≤ –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏ –æ—Ç —Ä–∞–∑–º–µ—Ä–æ–≤ –ø–æ–ª—è
 int getCellSize(int cols, int rows, int screenWidth, int screenHeight) {
-    int maxCellWidth = (screenWidth - 200) / cols;
-    int maxCellHeight = (screenHeight - 200) / rows;
+    int maxCellWidth = (screenWidth - 600) / cols;
+    int maxCellHeight = (screenHeight - 400) / rows;
     return std::min(maxCellWidth, maxCellHeight);
 }
-//ÍÎ‡ÒÒ ‰Îˇ Ô‡‚ËÎ ˜· ÒËÏÛÎˇˆËË
+//–∫–ª–∞—Å—Å –¥–ª—è –ø—Ä–∞–≤–∏–ª —á–± —Å–∏–º—É–ª—è—Ü–∏–∏
 class ChessGameOfLife {
 private:
     int rows, cols, CELL_SIZE;
@@ -635,7 +641,7 @@ public:
         return -1;
     }
 };
-//ÍÎ‡ÒÒ ‰Îˇ Ô‡‚ËÎ ˆ‚ÂÚÌÓÈ ÒËÏÛÎˇˆËË
+//–∫–ª–∞—Å—Å –¥–ª—è –ø—Ä–∞–≤–∏–ª —Ü–≤–µ—Ç–Ω–æ–π —Å–∏–º—É–ª—è—Ü–∏–∏
 class ColorGameOfLife {
 private:
     int rows, cols, CELL_SIZE;
@@ -964,6 +970,156 @@ public:
 
 };
 
+//–∫–ª–∞—Å—Å –¥–ª—è —É–≤–µ–ª–∏—á–µ–Ω–∏—è —á–∏—Å–ª–∞ —Å—Ç—Ä–æ–∫, —Å—Ç–æ–ª–±—Ü–æ–≤
+class CellCountControl {
+private:
+    sf::RectangleShape increaseRowsButton;
+    sf::RectangleShape decreaseRowsButton;
+    sf::Text rowsText;
+
+    sf::RectangleShape increaseColsButton;
+    sf::RectangleShape decreaseColsButton;
+    sf::Text colsText;
+
+    sf::Text rowsLabelText;
+    sf::Text colsLabelText;
+
+    int currentRows;
+    int currentCols;
+    int minCount;
+    int maxCount;
+
+public:
+    CellCountControl(float x, float y, int initialRows, int initialCols, int min, int max, const sf::Font& font)
+        : currentRows(initialRows), currentCols(initialCols), minCount(min), maxCount(max) {
+
+        rowsLabelText.setString("Rows:");
+        rowsLabelText.setFont(font);
+        rowsLabelText.setCharacterSize(20);
+        rowsLabelText.setFillColor(sf::Color(71, 74, 81));
+        rowsLabelText.setPosition(x, y);
+
+        decreaseRowsButton.setSize(sf::Vector2f(30, 30));
+        decreaseRowsButton.setPosition(x + rowsLabelText.getLocalBounds().width + 20, y);
+        decreaseRowsButton.setFillColor(sf::Color(165, 165, 165));
+
+        rowsText.setString(std::to_string(currentRows));
+        rowsText.setFont(font);
+        rowsText.setCharacterSize(20);
+        rowsText.setFillColor(sf::Color(71, 74, 81));
+        rowsText.setPosition(decreaseRowsButton.getPosition().x + decreaseRowsButton.getSize().x + 10, y);
+
+        increaseRowsButton.setSize(sf::Vector2f(30, 30));
+        increaseRowsButton.setPosition(rowsText.getPosition().x + rowsText.getLocalBounds().width + 10, y);
+        increaseRowsButton.setFillColor(sf::Color(165, 165, 165));
+
+        colsLabelText.setString("Columns:");
+        colsLabelText.setFont(font);
+        colsLabelText.setCharacterSize(20);
+        colsLabelText.setFillColor(sf::Color(71, 74, 81));
+        colsLabelText.setPosition(x, y + 40);
+
+        decreaseColsButton.setSize(sf::Vector2f(30, 30));
+        decreaseColsButton.setPosition(x + colsLabelText.getLocalBounds().width + 20, y + 40);
+        decreaseColsButton.setFillColor(sf::Color(165, 165, 165));
+
+        colsText.setString(std::to_string(currentCols));
+        colsText.setFont(font);
+        colsText.setCharacterSize(20);
+        colsText.setFillColor(sf::Color(71, 74, 81));
+        colsText.setPosition(decreaseColsButton.getPosition().x + decreaseColsButton.getSize().x + 10, y + 40);
+
+        increaseColsButton.setSize(sf::Vector2f(30, 30));
+        increaseColsButton.setPosition(colsText.getPosition().x + colsText.getLocalBounds().width + 10, y + 40);
+        increaseColsButton.setFillColor(sf::Color(165, 165, 165));
+    }
+
+    void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
+        if (event.type == sf::Event::MouseButtonPressed) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+            if (increaseRowsButton.getGlobalBounds().contains(mousePos)) {
+                if (currentRows < maxCount) {
+                    currentRows++;
+                    rowsText.setString(std::to_string(currentRows));
+                }
+            }
+            else if (decreaseRowsButton.getGlobalBounds().contains(mousePos)) {
+                if (currentRows > minCount) {
+                    currentRows--;
+                    rowsText.setString(std::to_string(currentRows));
+                }
+            }
+            else if (increaseColsButton.getGlobalBounds().contains(mousePos)) {
+                if (currentCols < maxCount) {
+                    currentCols++;
+                    colsText.setString(std::to_string(currentCols));
+                }
+            }
+            else if (decreaseColsButton.getGlobalBounds().contains(mousePos)) {
+                if (currentCols > minCount) {
+                    currentCols--;
+                    colsText.setString(std::to_string(currentCols));
+                }
+            }
+        }
+    }
+
+    void draw(sf::RenderWindow& window) {
+        const sf::Font& font = *rowsLabelText.getFont();
+
+        window.draw(rowsLabelText);
+        window.draw(decreaseRowsButton);
+        window.draw(rowsText);
+        window.draw(increaseRowsButton);
+
+        window.draw(colsLabelText);
+        window.draw(decreaseColsButton);
+        window.draw(colsText);
+        window.draw(increaseColsButton);
+
+        sf::Text minusRowsText("-", font, 20);
+        minusRowsText.setFillColor(sf::Color(71, 74, 81));
+        minusRowsText.setPosition(
+            decreaseRowsButton.getPosition().x + (decreaseRowsButton.getSize().x - minusRowsText.getLocalBounds().width) / 2,
+            decreaseRowsButton.getPosition().y + (decreaseRowsButton.getSize().y - minusRowsText.getLocalBounds().height) / 2 - 5
+        );
+        window.draw(minusRowsText);
+
+        sf::Text plusRowsText("+", font, 20);
+        plusRowsText.setFillColor(sf::Color(71, 74, 81));
+        plusRowsText.setPosition(
+            increaseRowsButton.getPosition().x + (increaseRowsButton.getSize().x - plusRowsText.getLocalBounds().width) / 2,
+            increaseRowsButton.getPosition().y + (increaseRowsButton.getSize().y - plusRowsText.getLocalBounds().height) / 2 - 5
+        );
+        window.draw(plusRowsText);
+
+        sf::Text minusColsText("-", font, 20);
+        minusColsText.setFillColor(sf::Color(71, 74, 81));
+        minusColsText.setPosition(
+            decreaseColsButton.getPosition().x + (decreaseColsButton.getSize().x - minusColsText.getLocalBounds().width) / 2,
+            decreaseColsButton.getPosition().y + (decreaseColsButton.getSize().y - minusColsText.getLocalBounds().height) / 2 - 5
+        );
+        window.draw(minusColsText);
+
+        sf::Text plusColsText("+", font, 20);
+        plusColsText.setFillColor(sf::Color(71, 74, 81));
+        plusColsText.setPosition(
+            increaseColsButton.getPosition().x + (increaseColsButton.getSize().x - plusColsText.getLocalBounds().width) / 2,
+            increaseColsButton.getPosition().y + (increaseColsButton.getSize().y - plusColsText.getLocalBounds().height) / 2 - 5
+        );
+        window.draw(plusColsText);
+    }
+
+    int getRows() const {
+        return currentRows;
+    }
+
+    int getCols() const {
+        return currentCols;
+    }
+};
+
 int main() {
     sf::Font font;
     if (!font.loadFromFile("calibri.ttf")) {
@@ -974,6 +1130,11 @@ int main() {
     sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
     unsigned int screenWidth = desktopMode.width;
     unsigned int screenHeight = desktopMode.height;
+
+    sf::Music music;
+    int currentMusicIndex = -1;
+    bool musicPlaying = false;
+    bool showMusicMenu = false;
 
     while (true) {
         sf::RenderWindow typeWindow(sf::VideoMode(screenWidth, screenHeight), "Choose Simulation Type");
@@ -1016,24 +1177,15 @@ int main() {
                 chessGame = new ChessGameOfLife(rows, cols, CELL_SIZE);
             }
 
-            sf::RectangleShape windowEnd(sf::Vector2f(800, 600));
-            windowEnd.setPosition(screenWidth / 2 - 400, screenHeight / 2 - 300);
-            windowEnd.setOutlineColor(sf::Color(71, 74, 81));
-            windowEnd.setFillColor(sf::Color(165, 165, 165));
-            windowEnd.setOutlineThickness(10);
-
-            sf::Text textEnd("End of simulation", font, 40);
-            textEnd.setFillColor(sf::Color(71, 74, 81));
-            textEnd.setPosition(windowEnd.getPosition().x + 300, windowEnd.getPosition().y + 280);
-
-            int leftMargin = 50;
+            //–æ–±—â–µ–µ
             int topMargin = (window.getSize().y - rows * CELL_SIZE) / 2;
             int buttonSpacing = 20;
 
-            Slider slider(screenWidth - 400, topMargin + 20, 1.0f, 2.5f);
+            Slider slider(screenWidth - 400, 80, 1.0f, 2.5f);
+            CellCountControl cellCountControl(screenWidth - 400, 180, rows, cols, 1, 150, font);
 
             sf::RectangleShape startButton(sf::Vector2f(200, 60));
-            startButton.setPosition(leftMargin, topMargin);
+            startButton.setPosition(50, 100);
             startButton.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text startText("Start", font, 20);
@@ -1044,7 +1196,7 @@ int main() {
             );
 
             sf::RectangleShape generationButton(sf::Vector2f(200, 60));
-            generationButton.setPosition(leftMargin, topMargin + 60 + buttonSpacing);
+            generationButton.setPosition(50, 180);
             generationButton.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text generationText("Generation: 0", font, 20);
@@ -1054,8 +1206,112 @@ int main() {
                 static_cast<int>(generationButton.getPosition().y + (generationButton.getSize().y - generationText.getLocalBounds().height) / 2 - 5)
             );
 
+            sf::RectangleShape windowEnd(sf::Vector2f(800, 600));
+            windowEnd.setPosition(screenWidth / 2 - 400, screenHeight / 2 - 300);
+            windowEnd.setOutlineColor(sf::Color(71, 74, 81));
+            windowEnd.setFillColor(sf::Color(165, 165, 165));
+            windowEnd.setOutlineThickness(10);
+
+            sf::Text textEnd("End of simulation", font, 40);
+            textEnd.setFillColor(sf::Color(71, 74, 81));
+            textEnd.setPosition(windowEnd.getPosition().x + 300, windowEnd.getPosition().y + 280);
+
+            sf::RectangleShape Clear(sf::Vector2f(200, 60));
+            Clear.setPosition(50, 260);
+            Clear.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text clearText("Clear", font, 20);
+            clearText.setPosition(
+                static_cast<int>(Clear.getPosition().x + (Clear.getSize().x - clearText.getLocalBounds().width) / 2),
+                static_cast<int>(Clear.getPosition().y + (Clear.getSize().y - clearText.getLocalBounds().height) / 2 - 5)
+            );
+            clearText.setFillColor(sf::Color(71, 74, 81));
+
+            sf::RectangleShape backButton(sf::Vector2f(60, 60));
+            backButton.setPosition(10, screenHeight - 180);
+            backButton.setFillColor(sf::Color(165, 165, 165));
+
+            sf::ConvexShape arrow;
+            arrow.setPointCount(3);
+            arrow.setPoint(0, sf::Vector2f(35, 15));
+            arrow.setPoint(1, sf::Vector2f(15, 30));
+            arrow.setPoint(2, sf::Vector2f(35, 45));
+            arrow.setFillColor(sf::Color::Black);
+            arrow.setPosition(backButton.getPosition().x, backButton.getPosition().y);
+
+            sf::Text victoryText("", font, 40);
+            victoryText.setFillColor(sf::Color(71, 74, 81));
+            victoryText.setPosition(windowEnd.getPosition().x + 200, windowEnd.getPosition().y + 250);
+
+            sf::RectangleShape rulesButton(sf::Vector2f(200, 60));
+            rulesButton.setPosition(screenWidth - 250, screenHeight - 180);
+            rulesButton.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text rulesText("Rules", font, 20);
+            rulesText.setFillColor(sf::Color(71, 74, 81));
+            rulesText.setPosition(
+                static_cast<int>(rulesButton.getPosition().x + (rulesButton.getSize().x - rulesText.getLocalBounds().width) / 2),
+                static_cast<int>(rulesButton.getPosition().y + (rulesButton.getSize().y - rulesText.getLocalBounds().height) / 2 - 5)
+            );
+
+            sf::RectangleShape musicButton(sf::Vector2f(200, 60));
+            musicButton.setPosition(screenWidth - 250, screenHeight - 180 - 70);
+            musicButton.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text musicText("Music", font, 20);
+            musicText.setFillColor(sf::Color(71, 74, 81));
+            musicText.setPosition(
+                static_cast<int>(musicButton.getPosition().x + (musicButton.getSize().x - musicText.getLocalBounds().width) / 2),
+                static_cast<int>(musicButton.getPosition().y + (musicButton.getSize().y - musicText.getLocalBounds().height) / 2 - 5)
+            );
+
+            sf::RectangleShape music1Button(sf::Vector2f(200, 60));
+            music1Button.setPosition(musicButton.getPosition().x, musicButton.getPosition().y - 70);
+            music1Button.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text music1Text("Music 1", font, 20);
+            music1Text.setFillColor(sf::Color(71, 74, 81));
+            music1Text.setPosition(
+                static_cast<int>(music1Button.getPosition().x + (music1Button.getSize().x - music1Text.getLocalBounds().width) / 2),
+                static_cast<int>(music1Button.getPosition().y + (music1Button.getSize().y - music1Text.getLocalBounds().height) / 2 - 5)
+            );
+
+            sf::RectangleShape music2Button(sf::Vector2f(200, 60));
+            music2Button.setPosition(music1Button.getPosition().x, music1Button.getPosition().y - 70);
+            music2Button.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text music2Text("Music 2", font, 20);
+            music2Text.setFillColor(sf::Color(71, 74, 81));
+            music2Text.setPosition(
+                static_cast<int>(music2Button.getPosition().x + (music2Button.getSize().x - music2Text.getLocalBounds().width) / 2),
+                static_cast<int>(music2Button.getPosition().y + (music2Button.getSize().y - music2Text.getLocalBounds().height) / 2 - 5)
+            );
+
+            sf::RectangleShape music3Button(sf::Vector2f(200, 60));
+            music3Button.setPosition(music2Button.getPosition().x, music2Button.getPosition().y - 70);
+            music3Button.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text music3Text("Music 3", font, 20);
+            music3Text.setFillColor(sf::Color(71, 74, 81));
+            music3Text.setPosition(
+                static_cast<int>(music3Button.getPosition().x + (music3Button.getSize().x - music3Text.getLocalBounds().width) / 2),
+                static_cast<int>(music3Button.getPosition().y + (music3Button.getSize().y - music3Text.getLocalBounds().height) / 2 - 5)
+            );
+
+            sf::RectangleShape toggleMusicButton(sf::Vector2f(200, 60));
+            toggleMusicButton.setPosition(music3Button.getPosition().x, music3Button.getPosition().y - 70);
+            toggleMusicButton.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text toggleMusicText("Turn on", font, 20);
+            toggleMusicText.setFillColor(sf::Color(71, 74, 81));
+            toggleMusicText.setPosition(
+                static_cast<int>(toggleMusicButton.getPosition().x + (toggleMusicButton.getSize().x - toggleMusicText.getLocalBounds().width) / 2),
+                static_cast<int>(toggleMusicButton.getPosition().y + (toggleMusicButton.getSize().y - toggleMusicText.getLocalBounds().height) / 2 - 5)
+            );
+
+            // –¥–ª—è —Ü–≤–µ—Ç–Ω–æ–π
             sf::RectangleShape colorInputBox(sf::Vector2f(200, 60));
-            colorInputBox.setPosition(leftMargin, topMargin + 4 * (60 + buttonSpacing));
+            colorInputBox.setPosition(50, 420);
             colorInputBox.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text colorText("Color (RGB)", font, 20);
@@ -1066,13 +1322,14 @@ int main() {
             );
 
             sf::RectangleShape colorPreview(sf::Vector2f(50, 50));
-            colorPreview.setPosition(leftMargin + 210, topMargin + 4 * (60 + buttonSpacing) + 5);
+            colorPreview.setPosition(260, 425);
             if (simType == COLORED) {
                 colorPreview.setFillColor(coloredGame->getCurrentColor());
             }
 
+            // –¥–ª—è –æ–¥–Ω–æ—Ü–≤–µ—Ç–Ω–æ–π
             sf::RectangleShape setPattern(sf::Vector2f(200, 60));
-            setPattern.setPosition(leftMargin, topMargin + 3 * (60 + buttonSpacing));
+            setPattern.setPosition(50, 340);
             setPattern.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text patternsText("Patterns", font, 20);
@@ -1119,29 +1376,7 @@ int main() {
             Error.setPosition(screenWidth / 2, 100);
             Error.setFillColor(sf::Color(128, 24, 24));
 
-            sf::RectangleShape Clear(sf::Vector2f(200, 60));
-            Clear.setPosition(leftMargin, topMargin + 2 * (60 + buttonSpacing));
-            Clear.setFillColor(sf::Color(165, 165, 165));
-
-            sf::Text clearText("Clear", font, 20);
-            clearText.setPosition(
-                static_cast<int>(Clear.getPosition().x + (Clear.getSize().x - clearText.getLocalBounds().width) / 2),
-                static_cast<int>(Clear.getPosition().y + (Clear.getSize().y - clearText.getLocalBounds().height) / 2 - 5)
-            );
-            clearText.setFillColor(sf::Color(71, 74, 81));
-
-            sf::RectangleShape backButton(sf::Vector2f(60, 60));
-            backButton.setPosition(10, screenHeight - 180);
-            backButton.setFillColor(sf::Color(165, 165, 165));
-
-            sf::ConvexShape arrow;
-            arrow.setPointCount(3);
-            arrow.setPoint(0, sf::Vector2f(35, 15));
-            arrow.setPoint(1, sf::Vector2f(15, 30));
-            arrow.setPoint(2, sf::Vector2f(35, 45));
-            arrow.setFillColor(sf::Color::Black);
-            arrow.setPosition(backButton.getPosition().x, backButton.getPosition().y);
-
+            //–ø—Ä–∞–≤–∏–ª–∞
             sf::RectangleShape ruleWindow(sf::Vector2f(800, 600));
             ruleWindow.setPosition(screenWidth / 2 - 400, screenHeight / 2 - 300);
             ruleWindow.setFillColor(sf::Color(165, 165, 165));
@@ -1152,7 +1387,7 @@ int main() {
             ruleClassicText.setPosition(ruleWindow.getPosition().x + 100, ruleWindow.getPosition().y + 120);
             ruleClassicText.setFillColor(sf::Color(71, 74, 81));
 
-            sf::Text ruleColoredText("Survival:\n    A live cell remains alive if it has 2 or 3 live neighbors. Its color is determined by the average color of its neighbors\nDeath:\n    From loneliness (fewer than 2 neighbors)\n    From overpopulation (more than 3 neighbors)\nBirth:\n    A dead cell comes to life if it has exactly 3 live neighbors. Its color is determined by the average color of its neighbors", font, 28);
+            sf::Text ruleColoredText("Survival:\n    A live cell remains alive if it has 2 or 3 live neighbors.\n   Its color is determined by the average color of its neighbors\nDeath:\n    From loneliness (fewer than 2 neighbors)\n    From overpopulation (more than 3 neighbors)\nBirth:\n    A dead cell comes to life if it has exactly 3 live neighbors.\n Its color is determined by the average color of its neighbors", font, 28);
             ruleColoredText.setPosition(ruleWindow.getPosition().x + 100, ruleWindow.getPosition().y + 120);
             ruleColoredText.setFillColor(sf::Color(71, 74, 81));
 
@@ -1160,8 +1395,9 @@ int main() {
             ruleChessText.setPosition(ruleWindow.getPosition().x + 100, ruleWindow.getPosition().y + 120);
             ruleChessText.setFillColor(sf::Color(71, 74, 81));
 
+            //–¥–ª—è —à–∞—Ö–º–∞—Ç–Ω–æ–π
             sf::RectangleShape whiteCountBox(sf::Vector2f(200, 60));
-            whiteCountBox.setPosition(leftMargin, topMargin + 4 * (60 + buttonSpacing));
+            whiteCountBox.setPosition(50, 420);
             whiteCountBox.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text whiteCountText("White: 0", font, 20);
@@ -1172,7 +1408,7 @@ int main() {
             );
 
             sf::RectangleShape blackCountBox(sf::Vector2f(200, 60));
-            blackCountBox.setPosition(leftMargin, topMargin + 5 * (60 + buttonSpacing));
+            blackCountBox.setPosition(50, 500);
             blackCountBox.setFillColor(sf::Color(165, 165, 165));
 
             sf::Text blackCountText("Black: 0", font, 20);
@@ -1181,11 +1417,6 @@ int main() {
                 static_cast<int>(blackCountBox.getPosition().x + (blackCountBox.getSize().x - blackCountText.getLocalBounds().width) / 2),
                 static_cast<int>(blackCountBox.getPosition().y + (blackCountBox.getSize().y - blackCountText.getLocalBounds().height) / 2 - 5)
             );
-
-            sf::Text victoryText("", font, 40);
-            victoryText.setFillColor(sf::Color(71, 74, 81));
-            victoryText.setPosition(windowEnd.getPosition().x + 200, windowEnd.getPosition().y + 250);
-
 
             sf::Clock clock;
             bool simulationRunning = false;
@@ -1209,10 +1440,75 @@ int main() {
                             window.close();
                             break;
                         }
+                        else if (rulesButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                            showRules = !showRules;
+                        }
+                        if (musicButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                            showMusicMenu = !showMusicMenu;
+                        }
+                        else if (showMusicMenu) {
+                            if (music1Button.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                                if (music.openFromFile(MUSIC_FILES[0])) {
+                                    currentMusicIndex = 0;
+                                    music.setLoop(true);
+                                    music.play();
+                                    musicPlaying = true;
+                                    toggleMusicText.setString("Turn off");
+                                }
+                            }
+                            else if (music2Button.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                                if (music.openFromFile(MUSIC_FILES[1])) {
+                                    currentMusicIndex = 1;
+                                    music.setLoop(true);
+                                    music.play();
+                                    musicPlaying = true;
+                                    toggleMusicText.setString("Turn off");
+                                }
+                            }
+                            else if (music3Button.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                                if (music.openFromFile(MUSIC_FILES[2])) {
+                                    currentMusicIndex = 2;
+                                    music.setLoop(true);
+                                    music.play();
+                                    musicPlaying = true;
+                                    toggleMusicText.setString("Turn off");
+                                }
+                            }
+                            else if (toggleMusicButton.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                                if (musicPlaying) {
+                                    music.pause();
+                                    toggleMusicText.setString("Turn on");
+                                }
+                                else if (currentMusicIndex != -1) {
+                                    music.play();
+                                    toggleMusicText.setString("Turn off");
+                                }
+                                musicPlaying = !musicPlaying;
+                            }
+                        }
                     }
                     slider.handleEvent(event, window);
-                    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Q) {
-                        showRules = !showRules;
+                    cellCountControl.handleEvent(event, window);
+                    int newRows = cellCountControl.getRows();
+                    int newCols = cellCountControl.getCols();
+                    if (newRows != rows || newCols != cols) {
+                        rows = newRows;
+                        cols = newCols;
+                        CELL_SIZE = getCellSize(cols, rows, screenWidth, screenHeight);
+
+                        if (simType == CLASSIC) {
+                            delete classicGame;
+                            classicGame = new GameOfLife(rows, cols, CELL_SIZE);
+                        }
+                        else if (simType == COLORED) {
+                            delete coloredGame;
+                            coloredGame = new ColorGameOfLife(rows, cols, CELL_SIZE);
+                            coloredGame->setCurrentColor(255, 0, 0);
+                        }
+                        else {
+                            delete chessGame;
+                            chessGame = new ChessGameOfLife(rows, cols, CELL_SIZE);
+                        }
                     }
 
                     if (!endSim && event.type == sf::Event::MouseButtonPressed) {
@@ -1418,6 +1714,8 @@ int main() {
 
                 window.draw(backButton);
                 window.draw(arrow);
+                window.draw(rulesButton);
+                window.draw(rulesText);
                 window.draw(startButton);
                 window.draw(startText);
                 window.draw(generationButton);
@@ -1425,6 +1723,20 @@ int main() {
                 window.draw(Clear);
                 window.draw(clearText);
                 slider.draw(window);
+                cellCountControl.draw(window);
+                window.draw(musicButton);
+                window.draw(musicText);
+
+                if (showMusicMenu) {
+                    window.draw(music1Button);
+                    window.draw(music1Text);
+                    window.draw(music2Button);
+                    window.draw(music2Text);
+                    window.draw(music3Button);
+                    window.draw(music3Text);
+                    window.draw(toggleMusicButton);
+                    window.draw(toggleMusicText);
+                }
 
                 if (simType == COLORED) {
                     window.draw(colorInputBox);
