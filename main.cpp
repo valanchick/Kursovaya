@@ -479,6 +479,7 @@ int getCellSize(int cols, int rows, int screenWidth, int screenHeight) {
 class ChessGameOfLife {
 private:
     int rows, cols, CELL_SIZE;
+    // 2D-вектор для хранения состояния клеток (0 - пусто, 1 - белая, 2 - черная)
     std::vector<std::vector<int>> grid;
     bool running = false;
     int generation = 0;
@@ -487,9 +488,10 @@ private:
 
 public:
     ChessGameOfLife(int rows, int cols, int CELL_SIZE) : rows(rows), cols(cols), CELL_SIZE(CELL_SIZE) {
+        // инициализация сетки нулями
         grid.resize(rows, std::vector<int>(cols, 0));
     }
-
+    // переключение состояния клетки
     void toggleCell(int x, int y) {
         if (grid[y][x] == 0) {
             grid[y][x] = currentColor;
@@ -501,18 +503,18 @@ public:
             grid[y][x] = 0;
         }
     }
-
+    // подсчет живых клеток каждого цвета
     std::pair<int, int> countLiveCells() const {
         int white = 0, black = 0;
-        for (const auto& row : grid) {
-            for (int cell : row) {
-                if (cell == 1) white++;
-                else if (cell == 2) black++;
+        for (size_t i = 0; i < grid.size(); ++i) {
+            for (size_t j = 0; j < grid[i].size(); ++j) {
+                if (grid[i][j] == 1) white++;
+                else if (grid[i][j] == 2) black++;
             }
         }
-        return { white, black };
+        return std::pair<int, int>(white, black);
     }
-
+    // очистка игрового поля
     void clear() {
         for (auto& row : grid) {
             for (auto& cell : row) {
@@ -521,7 +523,7 @@ public:
         }
         generation = 0;
     }
-
+    // вычисление следующего поколения клеток
     void change() {
         if (!running) return;
 
@@ -548,22 +550,22 @@ public:
                 int totalNeighbors = whiteNeighbors + blackNeighbors;
                 int current = grid[y][x];
                 int newState = 0;
-
+                // правила игры:
                 if (current == 1) {
-                    if (whiteNeighbors == 2 || whiteNeighbors == 3) {
+                    if ((whiteNeighbors == 2 || whiteNeighbors == 3) && (blackNeighbors != 3)) {
                         newState = 1;
                     }
                 }
                 else if (current == 2) {
-                    if (blackNeighbors == 2 || blackNeighbors == 3) {
+                    if ((blackNeighbors == 2 || blackNeighbors == 3) && (whiteNeighbors != 3)) {
                         newState = 2;
                     }
                 }
                 else {
-                    if (whiteNeighbors == 3) {
+                    if (whiteNeighbors == 3 && blackNeighbors != 3) {
                         newState = 1;
                     }
-                    else if (blackNeighbors == 3) {
+                    else if (blackNeighbors == 3 && whiteNeighbors != 3) {
                         newState = 2;
                     }
                 }
@@ -578,13 +580,13 @@ public:
         grid = newGrid;
         generation++;
     }
-
+    // отрисовка игрового поля
     void draw(sf::RenderWindow& window) {
         sf::RectangleShape cell(sf::Vector2f(CELL_SIZE, CELL_SIZE));
 
         int offsetX = (window.getSize().x - cols * CELL_SIZE) / 2;
         int offsetY = (window.getSize().y - rows * CELL_SIZE) / 2;
-
+        // отрисовка клеток
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < cols; x++) {
                 if (grid[y][x] == 1) {
@@ -600,7 +602,7 @@ public:
                 window.draw(cell);
             }
         }
-
+        // отрисовка сетки
         sf::RectangleShape line;
         line.setFillColor(sf::Color(71, 74, 81));
 
@@ -969,20 +971,18 @@ public:
     }
 
 };
-
-//класс для увеличения числа строк, столбцов
+// класс для изменения количества строк и столбцов в сетке
 class CellCountControl {
 private:
+    sf::RectangleShape rowsValueButton;
     sf::RectangleShape increaseRowsButton;
     sf::RectangleShape decreaseRowsButton;
     sf::Text rowsText;
 
+    sf::RectangleShape colsValueButton;
     sf::RectangleShape increaseColsButton;
     sf::RectangleShape decreaseColsButton;
     sf::Text colsText;
-
-    sf::Text rowsLabelText;
-    sf::Text colsLabelText;
 
     int currentRows;
     int currentCols;
@@ -993,47 +993,49 @@ public:
     CellCountControl(float x, float y, int initialRows, int initialCols, int min, int max, const sf::Font& font)
         : currentRows(initialRows), currentCols(initialCols), minCount(min), maxCount(max) {
 
-        rowsLabelText.setString("Rows:");
-        rowsLabelText.setFont(font);
-        rowsLabelText.setCharacterSize(20);
-        rowsLabelText.setFillColor(sf::Color(71, 74, 81));
-        rowsLabelText.setPosition(x, y);
-
         decreaseRowsButton.setSize(sf::Vector2f(30, 30));
-        decreaseRowsButton.setPosition(x + rowsLabelText.getLocalBounds().width + 20, y);
+        decreaseRowsButton.setPosition(x, y);
         decreaseRowsButton.setFillColor(sf::Color(165, 165, 165));
 
-        rowsText.setString(std::to_string(currentRows));
-        rowsText.setFont(font);
-        rowsText.setCharacterSize(20);
-        rowsText.setFillColor(sf::Color(71, 74, 81));
-        rowsText.setPosition(decreaseRowsButton.getPosition().x + decreaseRowsButton.getSize().x + 10, y);
+        rowsValueButton.setSize(sf::Vector2f(120, 30));
+        rowsValueButton.setPosition(x + decreaseRowsButton.getSize().x, y);
+        rowsValueButton.setFillColor(sf::Color(71, 74, 81));
 
         increaseRowsButton.setSize(sf::Vector2f(30, 30));
-        increaseRowsButton.setPosition(rowsText.getPosition().x + rowsText.getLocalBounds().width + 10, y);
+        increaseRowsButton.setPosition(x + decreaseRowsButton.getSize().x + rowsValueButton.getSize().x, y);
         increaseRowsButton.setFillColor(sf::Color(165, 165, 165));
 
-        colsLabelText.setString("Columns:");
-        colsLabelText.setFont(font);
-        colsLabelText.setCharacterSize(20);
-        colsLabelText.setFillColor(sf::Color(71, 74, 81));
-        colsLabelText.setPosition(x, y + 40);
+        rowsText.setString("Rows: " + std::to_string(currentRows));
+        rowsText.setFont(font);
+        rowsText.setCharacterSize(20);
+        rowsText.setFillColor(sf::Color::White);
+        rowsText.setPosition(
+            static_cast<int>(rowsValueButton.getPosition().x + (rowsValueButton.getSize().x - rowsText.getLocalBounds().width) / 2),
+            static_cast<int>(rowsValueButton.getPosition().y + (rowsValueButton.getSize().y - rowsText.getLocalBounds().height) / 2 - 5)
+        );
 
         decreaseColsButton.setSize(sf::Vector2f(30, 30));
-        decreaseColsButton.setPosition(x + colsLabelText.getLocalBounds().width + 20, y + 40);
+        decreaseColsButton.setPosition(x, y + 40);
         decreaseColsButton.setFillColor(sf::Color(165, 165, 165));
 
-        colsText.setString(std::to_string(currentCols));
-        colsText.setFont(font);
-        colsText.setCharacterSize(20);
-        colsText.setFillColor(sf::Color(71, 74, 81));
-        colsText.setPosition(decreaseColsButton.getPosition().x + decreaseColsButton.getSize().x + 10, y + 40);
+        colsValueButton.setSize(sf::Vector2f(120, 30));
+        colsValueButton.setPosition(x + decreaseColsButton.getSize().x, y + 40);
+        colsValueButton.setFillColor(sf::Color(71, 74, 81));
 
         increaseColsButton.setSize(sf::Vector2f(30, 30));
-        increaseColsButton.setPosition(colsText.getPosition().x + colsText.getLocalBounds().width + 10, y + 40);
+        increaseColsButton.setPosition(x + decreaseColsButton.getSize().x + colsValueButton.getSize().x, y + 40);
         increaseColsButton.setFillColor(sf::Color(165, 165, 165));
-    }
 
+        colsText.setString("Cols: " + std::to_string(currentCols));
+        colsText.setFont(font);
+        colsText.setCharacterSize(20);
+        colsText.setFillColor(sf::Color::White);
+        colsText.setPosition(
+            static_cast<int>(colsValueButton.getPosition().x + (colsValueButton.getSize().x - colsText.getLocalBounds().width) / 2),
+            static_cast<int>(colsValueButton.getPosition().y + (colsValueButton.getSize().y - colsText.getLocalBounds().height) / 2 - 5)
+        );
+    }
+    // обработка событий
     void handleEvent(const sf::Event& event, const sf::RenderWindow& window) {
         if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
@@ -1041,42 +1043,42 @@ public:
             if (increaseRowsButton.getGlobalBounds().contains(mousePos)) {
                 if (currentRows < maxCount) {
                     currentRows++;
-                    rowsText.setString(std::to_string(currentRows));
+                    rowsText.setString("Rows: " + std::to_string(currentRows));
                 }
             }
             else if (decreaseRowsButton.getGlobalBounds().contains(mousePos)) {
                 if (currentRows > minCount) {
                     currentRows--;
-                    rowsText.setString(std::to_string(currentRows));
+                    rowsText.setString("Rows: " + std::to_string(currentRows));
                 }
             }
             else if (increaseColsButton.getGlobalBounds().contains(mousePos)) {
                 if (currentCols < maxCount) {
                     currentCols++;
-                    colsText.setString(std::to_string(currentCols));
+                    colsText.setString("Cols: " + std::to_string(currentCols));
                 }
             }
             else if (decreaseColsButton.getGlobalBounds().contains(mousePos)) {
                 if (currentCols > minCount) {
                     currentCols--;
-                    colsText.setString(std::to_string(currentCols));
+                    colsText.setString("Cols: " + std::to_string(currentCols));
                 }
             }
         }
     }
-
+    // отрисовка всех элементов управления
     void draw(sf::RenderWindow& window) {
-        const sf::Font& font = *rowsLabelText.getFont();
+        const sf::Font& font = *rowsText.getFont();
 
-        window.draw(rowsLabelText);
         window.draw(decreaseRowsButton);
-        window.draw(rowsText);
+        window.draw(rowsValueButton);
         window.draw(increaseRowsButton);
+        window.draw(rowsText);
 
-        window.draw(colsLabelText);
         window.draw(decreaseColsButton);
-        window.draw(colsText);
+        window.draw(colsValueButton);
         window.draw(increaseColsButton);
+        window.draw(colsText);
 
         sf::Text minusRowsText("-", font, 20);
         minusRowsText.setFillColor(sf::Color(71, 74, 81));
@@ -1110,6 +1112,7 @@ public:
         );
         window.draw(plusColsText);
     }
+
 
     int getRows() const {
         return currentRows;
