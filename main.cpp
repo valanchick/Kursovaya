@@ -13,6 +13,7 @@
 #include <ChessGameOfLife.h>
 #include <ColorGameOfLife.h>
 #include <GameOfLife.h>
+#include <ctime>
 
 const std::vector<std::string> MUSIC_FILES = {
     "resources/audio/music 1.mp3",
@@ -652,6 +653,17 @@ int main() {
                 static_cast<int>(whiteCountBox.getPosition().y + (whiteCountBox.getSize().y - whiteCountText.getLocalBounds().height) / 2 - 5)
             );
 
+            sf::RectangleShape patternRandom(sf::Vector2f(200, 60));
+            patternRandom.setPosition(setPattern.getPosition().x, patternEight.getPosition().y + patternEight.getSize().y + 10);
+            patternRandom.setFillColor(sf::Color(165, 165, 165));
+
+            sf::Text randomText("Random", font, 20);
+            randomText.setFillColor(sf::Color(71, 74, 81));
+            randomText.setPosition(
+                static_cast<int>(patternRandom.getPosition().x + (patternRandom.getSize().x - randomText.getLocalBounds().width) / 2),
+                static_cast<int>(patternRandom.getPosition().y + (patternRandom.getSize().y - randomText.getLocalBounds().height) / 2 - 5)
+            );
+
             sf::RectangleShape blackCountBox(sf::Vector2f(200, 60));
             blackCountBox.setPosition(50, 500);
             blackCountBox.setFillColor(sf::Color(165, 165, 165));
@@ -821,6 +833,18 @@ int main() {
                                 else {
                                     showError = true;
                                 }
+                            }
+                            else if (patternRandom.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
+                                classicGame->clear();
+                                std::srand(std::time(nullptr)); 
+                                for (int y = 0; y < rows; y++) {
+                                    for (int x = 0; x < cols; x++) {
+                                        if (std::rand() % 100 < 30) { 
+                                            classicGame->setCell(x, y, 1);
+                                        }
+                                    }
+                                }
+                                showPatternMenu = false;
                             }
                             else if (patternEight.getGlobalBounds().contains(mousePos.x, mousePos.y)) {
                                 if (rows >= 8 && cols >= 8) {
@@ -1036,6 +1060,8 @@ int main() {
                         window.draw(gliderText);
                         window.draw(patternEight);
                         window.draw(eightText);
+                        window.draw(patternRandom);
+                        window.draw(randomText);
                     }
 
                     if (showError) {
