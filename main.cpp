@@ -1494,6 +1494,19 @@ int main() {
                     if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Q) {
                         showRules = !showRules;
                     }
+                     if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
+                         simulationRunning = !simulationRunning;
+                         startText.setString(simulationRunning ? "Stop" : "Start");
+                         if (simType == CLASSIC) {
+                             classicGame->toggleSimulation();
+                         }
+                         else if (simType == COLORED) {
+                             coloredGame->toggleSimulation();
+                         }
+                         else {
+                             chessGame->toggleSimulation();
+                         }
+                     }
                     cellCountControl.handleEvent(event, window);
                     int newRows = cellCountControl.getRows();
                     int newCols = cellCountControl.getCols();
